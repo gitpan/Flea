@@ -26,9 +26,10 @@ my %WriteMakefileArgs = (
     'HTTP::Exception' => '0',
     'JSON' => '0',
     'Plack::Request' => '0',
-    'Try::Tiny' => '0'
+    'Try::Tiny' => '0',
+    'URI' => '0'
   },
-  'VERSION' => '0.01',
+  'VERSION' => '0.02',
   'test' => {
     'TESTS' => 't/*.t'
   }

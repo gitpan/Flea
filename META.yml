@@ -20,4 +20,5 @@ requires:
   JSON: 0
   Plack::Request: 0
   Try::Tiny: 0
-version: 0.01
+  URI: 0
+version: 0.02

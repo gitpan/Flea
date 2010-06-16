@@ -1,6 +1,6 @@
 package Flea;
 BEGIN {
-  $Flea::VERSION = '0.01';
+  $Flea::VERSION = '0.02';
 }
 
 use strict;
@@ -13,6 +13,7 @@ use JSON;
 use HTTP::Exception;
 use Try::Tiny;
 use Plack::Request;
+use URI;
 
 our @EXPORT = qw(handle http route);
 our $_add = sub { croak 'Trying to add handler outside bite' };
@@ -31,9 +32,15 @@ export method Flea::Parser::Method {
     my $code    = pop;
     my $re      = pop;
     my $methods = [@_];
-    use Data::Dumper;
-    warn Dumper $re;
     route($methods, $re, $code);
+}
+
+export uri {
+    my ($req, $path) = @_;
+    my $base  = $req->base->as_string;
+    $base =~ s|/$||;
+    $path =~ s|^/||;
+    URI->new("$base/$path")->canonical;
 }
 
 export json {
@@ -138,7 +145,7 @@ Flea - Minimalistic sugar for your Plack
 
 =head1 VERSION
 
-version 0.01
+version 0.02
 
 =head1 SYNOPSIS
 
@@ -183,20 +190,20 @@ Flea is a L<Exporter::Declare>.  Everything from there should work.
 Takes a block as an argument and returns a PSGI app.  Inside the block is
 where you define your route handlers.  If you try defining them outside of a
 route block, Flea will bite you.  Note that the routing is done via path_info,
-so your app will be 'mountable' via L<Plack::Builder>.
+so your app will be mountable via L<Plack::Builder>.
 
 =head2 get, post, put, del, any
 
 C<any> will match any request method, and the others will only match the
 corresponding method.  If you need to match some other method or combination
-of methods, see L<method>.  Aren't you glad you can rename these? (see
+of methods, see L</method>.  Aren't you glad you can rename these? (see
 L<Exporter::Declare>).
 
 Next come a regex to match path_info against.  You should surround the regex
 with single quotes.  B<LISTEN>:  are you listening?  B<SINGLE QUOTES>.  This
 isn't a real perl string, it's parsed with Devel::Declare magic (you'll end up
 with a compiled regex).  If you try to use C<qr> or something cute like that,
-you'll get B<bitten>.  If you need to do something fancy, use L<route> instead
+you'll get B<bitten>.  If you need to do something fancy, use L</route> instead
 of these sugary things.
 
 Last of all comes a block.  This receives the PSGI env as its first argument
@@ -207,7 +214,7 @@ response (like Plack::Response).
 =head2 method
 
 Just like get/post/etc, except you can tack on method names (separated by
-commas) to say which methods will match.
+spaces) to say which methods will match.
 
     method options '^/regex$' {
     }
@@ -235,6 +242,14 @@ Short for Plack::Request->new($env)
 =head2 response($request)
 
 Short for $request->new_response(200).
+
+=head2 uri($request, $path)
+
+Returns a canonical L<URI> representing the path you passed with
+$request->base welded onto the front.  Does the Right Thing if $request->base
+or $path have leading/trailing slashes.  Handy for links which are internal to
+your app, because it will still behave if you mount your app somewhere other
+than C</>.
 
 =head2 json($str)
 
@@ -264,7 +279,7 @@ Shortcut for HTTP::Exception->throw.  Accepts the same arguments.
 
 =head2 pass
 
-Throws a L<Flea::Pass> exception, which causes Flea to pretend that your
+Throws a Flea::Pass exception, which causes Flea to pretend that your
 handler didn't match and keep trying other handlers.  By the way, the default
 action when no handler is found (or they all passed) is to throw a 404
 exception.
@@ -275,7 +290,7 @@ This module is extremely immature as of this writing.  Not only does the
 author have the mind of a child, he has never before tinkered with
 Devel::Declare magic, although L<Exporter::Declare> sure does help.  The
 author hasn't thought very hard about the interface, either, so that could
-change.  When Flea breaks or doesn't do what you want,  fork it on L<GITHUB>
+change.  When Flea breaks or doesn't do what you want, fork it on L</GITHUB>
 and/or send the author a patch or something.  Or go use a real web framework
 for grownups, like L<Catalyst>.
 
