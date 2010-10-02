@@ -1,6 +1,6 @@
 package Flea::Parser::Route;
 BEGIN {
-  $Flea::Parser::Route::VERSION = '0.02';
+  $Flea::Parser::Route::VERSION = '0.03';
 }
 
 use warnings;

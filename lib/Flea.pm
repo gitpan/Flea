@@ -1,6 +1,6 @@
 package Flea;
 BEGIN {
-  $Flea::VERSION = '0.02';
+  $Flea::VERSION = '0.03';
 }
 
 use strict;
@@ -8,34 +8,35 @@ use warnings;
 
 use Carp qw(croak);
 use Exception::Class ('Flea::Pass' => { alias => 'pass' });
-use Exporter::Declare;
+use Exporter::Declare '-magic';
 use JSON;
 use HTTP::Exception;
 use Try::Tiny;
 use Plack::Request;
 use URI;
+use List::Util qw(first);
 
-our @EXPORT = qw(handle http route);
+default_exports qw(handle http route);
 our $_add = sub { croak 'Trying to add handler outside bite' };
 
 sub route {
     my ($methods, $regex, $code) = @_;
-    $_add->(lc $_, $regex, $code) for @$methods;
+    $_add->([map {lc} @$methods], $regex, $code);
 }
 
-export get    Flea::Parser::Route  { route(['get'],  @_) }
-export put    Flea::Parser::Route  { route(['put'],  @_) }
-export del    Flea::Parser::Route  { route(['del'],  @_) }
-export any    Flea::Parser::Route  { route(['any'],  @_) }
-export post   Flea::Parser::Route  { route(['post'], @_) }
-export method Flea::Parser::Method { 
+default_export get    Flea::Parser::Route  { route(['get'],  @_) }
+default_export put    Flea::Parser::Route  { route(['put'],  @_) }
+default_export del    Flea::Parser::Route  { route(['del'],  @_) }
+default_export any    Flea::Parser::Route  { route(['any'],  @_) }
+default_export post   Flea::Parser::Route  { route(['post'], @_) }
+default_export method Flea::Parser::Method { 
     my $code    = pop;
     my $re      = pop;
     my $methods = [@_];
     route($methods, $re, $code);
 }
 
-export uri {
+default_export uri {
     my ($req, $path) = @_;
     my $base  = $req->base->as_string;
     $base =~ s|/$||;
@@ -43,7 +44,7 @@ export uri {
     URI->new("$base/$path")->canonical;
 }
 
-export json {
+default_export json {
     return [
         200,
         ['Content-Type' => 'application/json; charset=UTF-8'],
@@ -51,7 +52,7 @@ export json {
     ];
 }
 
-export html {
+default_export html {
     return [
         200,
         ['Content-Type' => 'text/html; charset=UTF-8'],
@@ -59,7 +60,7 @@ export html {
     ];
 }
 
-export text {
+default_export text {
     return [
         200,
         ['Content-Type' => 'text/plain; charset=UTF-8'],
@@ -80,13 +81,13 @@ sub handle {
     ];
 }
 
-export file {
+default_export file {
     open my $fh, '<', shift;
     handle($fh, @_);
 }
 
-export request  { Plack::Request->new(shift) }
-export response { shift->new_response(200) }
+default_export request  { Plack::Request->new(shift) }
+default_export response { shift->new_response(200) }
 
 sub _rethrow {
     my $e = shift;
@@ -96,10 +97,15 @@ sub _rethrow {
 
 sub _find_and_run {
     my ($handlers, $env) = @_;
-    return unless $handlers;
+    my $method = lc $env->{REQUEST_METHOD};
+    my $found  = 0;
     for my $h (@$handlers) {
         my @matches = $env->{PATH_INFO} =~ $h->{pattern};
         if (@matches) {
+            $found = 1;
+            next unless first { $_ eq $method || $_ eq 'any' }
+                        @{ $h->{methods} };
+
             my $result = try {
                 $h->{handler}->($env, @matches);
             }
@@ -108,33 +114,23 @@ sub _find_and_run {
                 _rethrow($e) unless Flea::Pass->caught;
                 undef;
             };
-            if (try { $result->can('finalize') }) {
-                $result = $result->finalize;
-            }
-            return $result if $result;
+            next unless $result;
+            return try { $result->finalize } || $result;
         }
     }
-    undef;
+    http ($found ? 405 : 404);
 }
 
-export bite codeblock {
+default_export bite codeblock {
     my $block = shift;
-    my %method;
+    my @handlers;
     local $_add = sub {
         my ($m, $r, $c) = @_;
-        push(@{$method{$m}}, { pattern => $r, handler => $c });
+        push(@handlers, { methods => $m, pattern => $r, handler => $c });
     };
     $block->();
 
-    return sub {
-        my $env    = shift;
-        my $result = _find_and_run($method{any}, $env);
-        return $result if $result;
-
-        $result    = _find_and_run($method{lc $env->{REQUEST_METHOD}}, $env);
-        return $result if $result;
-        http 404;
-    };
+    return sub { _find_and_run(\@handlers, shift) };
 }
 
 1;
@@ -145,7 +141,7 @@ Flea - Minimalistic sugar for your Plack
 
 =head1 VERSION
 
-version 0.02
+version 0.03
 
 =head1 SYNOPSIS
 

@@ -22,14 +22,15 @@ my %WriteMakefileArgs = (
   'PREREQ_PM' => {
     'Carp' => '0',
     'Exception::Class' => '0',
-    'Exporter::Declare' => '0',
+    'Exporter::Declare' => '0.100',
     'HTTP::Exception' => '0',
     'JSON' => '0',
+    'List::Util' => '0',
     'Plack::Request' => '0',
     'Try::Tiny' => '0',
     'URI' => '0'
   },
-  'VERSION' => '0.02',
+  'VERSION' => '0.03',
   'test' => {
     'TESTS' => 't/*.t'
   }
