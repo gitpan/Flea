@@ -21,6 +21,7 @@ my %WriteMakefileArgs = (
   'NAME' => 'Flea',
   'PREREQ_PM' => {
     'Carp' => '0',
+    'Devel::Declare::Parser' => '0',
     'Exception::Class' => '0',
     'Exporter::Declare' => '0.100',
     'HTTP::Exception' => '0',
@@ -30,7 +31,7 @@ my %WriteMakefileArgs = (
     'Try::Tiny' => '0',
     'URI' => '0'
   },
-  'VERSION' => '0.03',
+  'VERSION' => '0.04',
   'test' => {
     'TESTS' => 't/*.t'
   }

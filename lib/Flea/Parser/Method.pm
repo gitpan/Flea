@@ -1,6 +1,6 @@
 package Flea::Parser::Method;
 BEGIN {
-  $Flea::Parser::Method::VERSION = '0.03';
+  $Flea::Parser::Method::VERSION = '0.04';
 }
 
 use warnings;
